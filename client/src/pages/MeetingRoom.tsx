@@ -39,8 +39,13 @@ interface SignalPayload {
   candidate?: RTCIceCandidateInit;
 }
 
-const API_URL = "http://localhost:5000";
-const SOCKET_URL = "http://localhost:5000";
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+const SOCKET_URL = (
+  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000"
+).replace(/\/$/, "");
 
 function RemoteVideo({
   stream,
@@ -56,6 +61,7 @@ function RemoteVideo({
     if (!video) return;
 
     video.srcObject = stream;
+
     void video.play().catch((error) => {
       console.warn("Remote video playback requires user interaction:", error);
     });
@@ -85,6 +91,7 @@ export default function MeetingRoom() {
   const [cameraOn, setCameraOn] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
+
   const [remoteStreams, setRemoteStreams] = useState<
     Record<string, MediaStream>
   >({});
@@ -137,6 +144,7 @@ export default function MeetingRoom() {
         }
 
         const loadedMeeting: Meeting = data.meeting ?? data;
+
         if (mountedRef.current) {
           setMeeting(loadedMeeting);
         }
@@ -167,7 +175,11 @@ export default function MeetingRoom() {
       if (existing) return existing;
 
       const socket = socketRef.current;
-      if (!socket || !meetingId) return undefined;
+
+      // A connected socket must have an ID before negotiating with a peer.
+      if (!socket?.connected || !socket.id || !meetingId) {
+        return undefined;
+      }
 
       const pc = new RTCPeerConnection({
         iceServers: [
@@ -213,8 +225,7 @@ export default function MeetingRoom() {
       };
 
       pc.ontrack = (event) => {
-        const stream =
-          event.streams[0] ?? new MediaStream([event.track]);
+        const stream = event.streams[0] ?? new MediaStream([event.track]);
 
         setRemoteStreams((previous) => ({
           ...previous,
@@ -288,7 +299,9 @@ export default function MeetingRoom() {
 
     socket.on("connect_error", (err) => {
       console.error("Socket connection error:", err.message);
-      setError("Real-time connection failed. Check that the backend is running.");
+      setError(
+        "Real-time connection failed. Check that the backend is running."
+      );
     });
 
     socket.on(
@@ -488,7 +501,6 @@ export default function MeetingRoom() {
     }
   }, [cameraOn, screenSharing]);
 
-  // Start camera and microphone with browser audio processing enabled.
   const startCamera = async () => {
     if (startingMediaRef.current) return;
     startingMediaRef.current = true;
@@ -764,10 +776,7 @@ export default function MeetingRoom() {
               {screenSharing ? "Stop sharing" : "Share screen"}
             </button>
 
-            <button
-              onClick={leaveMeeting}
-              className="meeting-control-button"
-            >
+            <button onClick={leaveMeeting} className="meeting-control-button">
               Leave
             </button>
           </div>
