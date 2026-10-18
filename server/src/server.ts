@@ -18,8 +18,7 @@ const httpServer = createServer(app);
 const PORT = Number(process.env.PORT) || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Configure frontend origins through FRONTEND_URL.
-// Keep localhost origins available for local development.
+// Local development origins plus the deployed frontend URL.
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -37,7 +36,7 @@ const allowedOrigins = [
 
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
-    // Allow requests without an Origin header (e.g. health checks).
+    // Permit requests without an Origin header, such as health checks.
     if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
       callback(null, true);
       return;
@@ -140,6 +139,8 @@ io.on("connection", (socket) => {
         meetingId: roomId,
         socketId: socket.id,
       });
+
+      console.log(`Socket ${socket.id} joined meeting ${roomId}`);
     } catch (error) {
       console.error("Unable to join meeting room:", error);
 
@@ -156,6 +157,7 @@ io.on("connection", (socket) => {
       typeof data.targetSocketId !== "string" ||
       !data.offer
     ) {
+      console.log("Invalid WebRTC offer");
       return;
     }
 
@@ -177,6 +179,7 @@ io.on("connection", (socket) => {
       typeof data.targetSocketId !== "string" ||
       !data.answer
     ) {
+      console.log("Invalid WebRTC answer");
       return;
     }
 
@@ -198,6 +201,7 @@ io.on("connection", (socket) => {
       typeof data.targetSocketId !== "string" ||
       !data.candidate
     ) {
+      console.log("Invalid ICE candidate");
       return;
     }
 
@@ -247,6 +251,8 @@ io.on("connection", (socket) => {
 
     socket.leave(meetingId);
     delete socket.data.meetingId;
+
+    console.log(`Socket ${socket.id} left meeting ${meetingId}`);
   });
 
   socket.on("disconnect", () => {
