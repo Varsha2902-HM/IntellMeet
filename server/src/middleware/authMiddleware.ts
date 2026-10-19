@@ -1,3 +1,4 @@
+
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
@@ -11,36 +12,51 @@ export const protect = (
   res: Response,
   next: NextFunction
 ) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      message: "Authentication required",
+    });
+  }
+
+  const token = authHeader.slice(7).trim();
+
+  if (!token) {
+    return res.status(401).json({
+      message: "Authentication token is missing",
+    });
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    console.error("JWT_SECRET is not configured");
+    return res.status(500).json({
+      message: "Server authentication is not configured",
+    });
+  }
+
   try {
-    const authHeader = req.headers.authorization;
+    const decoded = jwt.verify(token, jwtSecret);
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (
+      typeof decoded === "string" ||
+      !decoded.userId ||
+      !["Admin", "Member"].includes(decoded.role)
+    ) {
       return res.status(401).json({
-        message: "Authentication required",
+        message: "Invalid authentication token",
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    (req as any).user = {
+      userId: decoded.userId,
+      role: decoded.role,
+    };
 
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!jwtSecret) {
-      return res.status(500).json({
-        message: "JWT secret is not configured",
-      });
-    }
-
-    const decoded = jwt.verify(
-      token,
-      jwtSecret
-    ) as JwtPayload;
-
-    (req as any).user = decoded;
-
-    next();
+    return next();
   } catch (error) {
-    console.error("Authentication error:", error);
-
     return res.status(401).json({
       message: "Invalid or expired token",
     });

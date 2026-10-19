@@ -1,21 +1,16 @@
+
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Meeting from "../models/Meeting";
 
+// CREATE MEETING
 export const createMeeting = async (req: Request, res: Response) => {
   try {
-    const {
-      title,
-      description,
-      startTime,
-      endTime,
-    } = req.body;
-
+    const { title, description, startTime, endTime } = req.body;
     const userId = (req as any).user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     if (!title || !startTime) {
@@ -45,28 +40,23 @@ export const createMeeting = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Create meeting error:", error);
-
     return res.status(500).json({
       message: "Server error while creating meeting",
     });
   }
 };
 
+// GET MEETINGS FOR LOGGED-IN USER
 export const getMeetings = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const meetings = await Meeting.find({
-      $or: [
-        { host: userId },
-        { participants: userId },
-      ],
+      $or: [{ host: userId }, { participants: userId }],
     })
       .populate("host", "name email")
       .populate("participants", "name email")
@@ -78,21 +68,30 @@ export const getMeetings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Get meetings error:", error);
-
     return res.status(500).json({
       message: "Server error while fetching meetings",
     });
   }
 };
 
-export const getMeetingById = async (
-  req: Request,
-  res: Response
-) => {
+// GET ONE MEETING — HOST OR PARTICIPANTS ONLY
+export const getMeetingById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as any).user?.userId;
 
-    const meeting = await Meeting.findById(id)
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid meeting ID" });
+    }
+
+    const meeting = await Meeting.findOne({
+      _id: id,
+      $or: [{ host: userId }, { participants: userId }],
+    })
       .populate("host", "name email")
       .populate("participants", "name email");
 
@@ -108,7 +107,6 @@ export const getMeetingById = async (
     });
   } catch (error) {
     console.error("Get meeting error:", error);
-
     return res.status(500).json({
       message: "Server error while fetching meeting",
     });
