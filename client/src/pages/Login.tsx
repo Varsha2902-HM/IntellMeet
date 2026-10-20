@@ -10,33 +10,24 @@ function Login() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Use the deployed backend URL from client/.env
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    "https://intellmeet-backend-tqot.onrender.com"
+  ).replace(/\/$/, "");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setMessage("");
     setLoading(true);
 
     try {
-      if (!API_URL) {
-        throw new Error("Backend API URL is not configured.");
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
       const data = await response.json();
 
@@ -45,25 +36,17 @@ function Login() {
         return;
       }
 
-      // Save authentication information
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       setMessage("Login successful!");
 
-      // Go to dashboard
       setTimeout(() => {
         navigate("/dashboard");
       }, 700);
     } catch (error) {
       console.error("Login error:", error);
-
-      setMessage(
-        error instanceof Error &&
-          error.message === "Backend API URL is not configured."
-          ? "Backend URL is missing. Please check your environment configuration."
-          : "Unable to connect to the server. Please try again."
-      );
+      setMessage("Unable to connect to the server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -114,7 +97,6 @@ function Login() {
               <input type="checkbox" />
               Remember me
             </label>
-
             <span className="forgot">Forgot password?</span>
           </div>
 
