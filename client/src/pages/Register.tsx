@@ -9,16 +9,16 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Use the deployed backend URL from client/.env
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    "https://intellmeet-backend-tqot.onrender.com"
+  ).replace(/\/$/, "");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setMessage("");
 
     if (password !== confirmPassword) {
@@ -31,11 +31,6 @@ function Register() {
       return;
     }
 
-    if (!API_URL) {
-      setMessage("Backend URL is not configured.");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -44,11 +39,7 @@ function Register() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
@@ -58,19 +49,17 @@ function Register() {
         return;
       }
 
-      // Save authentication information
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       setMessage("Account created successfully!");
 
-      // Navigate to dashboard
       setTimeout(() => {
         navigate("/dashboard");
       }, 700);
     } catch (error) {
       console.error("Registration error:", error);
-      setMessage("Unable to connect to the server.");
+      setMessage("Unable to connect to the server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -79,19 +68,16 @@ function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        {/* LOGO */}
         <div className="auth-logo">
           <span>✦</span>
           <h1>IntellMeet</h1>
         </div>
 
-        {/* HEADING */}
         <div className="auth-heading">
           <h2>Create your account</h2>
           <p>Start collaborating with your team today.</p>
         </div>
 
-        {/* FORM */}
         <form onSubmit={handleRegister} className="auth-form">
           <div className="form-group">
             <label htmlFor="register-name">Full name</label>
@@ -156,14 +142,12 @@ function Register() {
           </button>
         </form>
 
-        {/* MESSAGE */}
         {message && (
           <div className="auth-message" role="status">
             {message}
           </div>
         )}
 
-        {/* LOGIN */}
         <div className="auth-signup">
           Already have an account?{" "}
           <Link to="/login">Sign in</Link>
