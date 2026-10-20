@@ -20,7 +20,11 @@ interface Meeting {
 function Dashboard() {
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  // Use Vercel's environment variable, or fall back to the deployed backend.
+  const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    "https://intellmeet-backend-tqot.onrender.com"
+  ).replace(/\/$/, "");
 
   const [user, setUser] = useState<any>({});
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -59,10 +63,6 @@ function Dashboard() {
       if (!token) {
         navigate("/login");
         return;
-      }
-
-      if (!API_URL) {
-        throw new Error("Backend URL is not configured.");
       }
 
       const response = await fetch(`${API_URL}/api/meetings`, {
@@ -172,10 +172,6 @@ function Dashboard() {
         return;
       }
 
-      if (!API_URL) {
-        throw new Error("Backend URL is not configured.");
-      }
-
       const response = await fetch(`${API_URL}/api/meetings`, {
         method: "POST",
         headers: {
@@ -224,13 +220,7 @@ function Dashboard() {
       }, 1000);
     } catch (error) {
       console.error("Create meeting error:", error);
-
-      setMeetingMessage(
-        error instanceof Error &&
-          error.message === "Backend URL is not configured."
-          ? "Backend URL is missing. Check client/.env and Vercel environment variables."
-          : "Unable to connect to the server. Please try again."
-      );
+      setMeetingMessage("Unable to connect to the server. Please try again.");
     } finally {
       setCreatingMeeting(false);
     }
