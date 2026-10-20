@@ -40,11 +40,13 @@ interface SignalPayload {
 }
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
+  import.meta.env.VITE_API_URL ||
+  "https://intellmeet-backend-tqot.onrender.com"
 ).replace(/\/$/, "");
 
 const SOCKET_URL = (
-  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000"
+  import.meta.env.VITE_SOCKET_URL ||
+  "https://intellmeet-backend-tqot.onrender.com"
 ).replace(/\/$/, "");
 
 function RemoteVideo({
@@ -63,7 +65,10 @@ function RemoteVideo({
     video.srcObject = stream;
 
     void video.play().catch((error) => {
-      console.warn("Remote video playback requires user interaction:", error);
+      console.warn(
+        "Remote video playback requires user interaction:",
+        error
+      );
     });
   }, [stream]);
 
@@ -111,7 +116,6 @@ export default function MeetingRoom() {
 
   const token = localStorage.getItem("token");
 
-  // Load meeting details.
   useEffect(() => {
     mountedRef.current = true;
 
@@ -123,6 +127,7 @@ export default function MeetingRoom() {
       }
 
       if (!token) {
+        setLoading(false);
         navigate("/login");
         return;
       }
@@ -139,8 +144,17 @@ export default function MeetingRoom() {
 
         const data = await response.json();
 
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error(data.message || "Unable to load this meeting.");
+          throw new Error(
+            data.message || "Unable to load this meeting."
+          );
         }
 
         const loadedMeeting: Meeting = data.meeting ?? data;
@@ -151,7 +165,9 @@ export default function MeetingRoom() {
       } catch (err) {
         if (mountedRef.current) {
           setError(
-            err instanceof Error ? err.message : "Unable to load meeting."
+            err instanceof Error
+              ? err.message
+              : "Unable to load meeting."
           );
         }
       } finally {
@@ -168,7 +184,6 @@ export default function MeetingRoom() {
     };
   }, [meetingId, token, navigate]);
 
-  // Create a WebRTC connection for a participant.
   const createPeerConnection = useCallback(
     (remoteSocketId: string): PeerState | undefined => {
       const existing = peerConnectionsRef.current.get(remoteSocketId);
@@ -176,7 +191,6 @@ export default function MeetingRoom() {
 
       const socket = socketRef.current;
 
-      // A connected socket must have an ID before negotiating with a peer.
       if (!socket?.connected || !socket.id || !meetingId) {
         return undefined;
       }
@@ -225,7 +239,8 @@ export default function MeetingRoom() {
       };
 
       pc.ontrack = (event) => {
-        const stream = event.streams[0] ?? new MediaStream([event.track]);
+        const stream =
+          event.streams[0] ?? new MediaStream([event.track]);
 
         setRemoteStreams((previous) => ({
           ...previous,
@@ -283,7 +298,6 @@ export default function MeetingRoom() {
     [meetingId]
   );
 
-  // Connect to the real-time meeting server.
   useEffect(() => {
     if (!meetingId || !token || !meeting) return;
 
@@ -300,14 +314,16 @@ export default function MeetingRoom() {
     socket.on("connect_error", (err) => {
       console.error("Socket connection error:", err.message);
       setError(
-        "Real-time connection failed. Check that the backend is running."
+        "Real-time connection failed. Check the deployed backend and Socket.IO configuration."
       );
     });
 
     socket.on(
       "existing-participants",
       (data: string[] | { participants?: string[] }) => {
-        const ids = Array.isArray(data) ? data : data.participants ?? [];
+        const ids = Array.isArray(data)
+          ? data
+          : data.participants ?? [];
 
         ids.forEach((participantId) => {
           if (participantId && participantId !== socket.id) {
@@ -357,7 +373,8 @@ export default function MeetingRoom() {
       const offerCollision =
         data.offer.type === "offer" &&
         (peer.makingOffer ||
-          (pc.signalingState !== "stable" && !peer.settingRemoteAnswer));
+          (pc.signalingState !== "stable" &&
+            !peer.settingRemoteAnswer));
 
       peer.ignoreOffer = !peer.polite && offerCollision;
       if (peer.ignoreOffer) return;
@@ -493,7 +510,6 @@ export default function MeetingRoom() {
     };
   }, [meetingId, token, meeting, createPeerConnection]);
 
-  // Attach the active local stream to the video element.
   useEffect(() => {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject =

@@ -24,6 +24,9 @@ interface Meeting {
 
 type FilterType = "all" | "upcoming" | "past";
 
+const API_URL =
+  "https://intellmeet-backend-tqot.onrender.com/api/meetings";
+
 function getHostName(host: Meeting["host"]): string {
   if (!host) return "Unknown host";
   if (typeof host === "string") return host;
@@ -57,7 +60,6 @@ function Meetings() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
 
-  // Capture the current time once when the page initializes.
   const [currentTime] = useState(() => Date.now());
 
   const fetchMeetings = useCallback(async () => {
@@ -73,16 +75,13 @@ function Meetings() {
     }
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/meetings",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(API_URL, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       const data = await response.json();
 
@@ -115,8 +114,6 @@ function Meetings() {
     }
   }, [navigate]);
 
-  // Defer the first request to avoid synchronous state updates
-  // inside the effect body.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void fetchMeetings();

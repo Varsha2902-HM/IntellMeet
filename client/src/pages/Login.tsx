@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -9,6 +10,9 @@ function Login() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Use the deployed backend URL from client/.env
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -16,8 +20,12 @@ function Login() {
     setLoading(true);
 
     try {
+      if (!API_URL) {
+        throw new Error("Backend API URL is not configured.");
+      }
+
       const response = await fetch(
-        "http://localhost:5000/api/auth/login",
+        `${API_URL}/api/auth/login`,
         {
           method: "POST",
           headers: {
@@ -48,8 +56,14 @@ function Login() {
         navigate("/dashboard");
       }, 700);
     } catch (error) {
-      console.error(error);
-      setMessage("Unable to connect to the server.");
+      console.error("Login error:", error);
+
+      setMessage(
+        error instanceof Error &&
+          error.message === "Backend API URL is not configured."
+          ? "Backend URL is missing. Please check your environment configuration."
+          : "Unable to connect to the server. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -58,7 +72,6 @@ function Login() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-
         <div className="auth-logo">
           <span>✦</span>
           <h1>IntellMeet</h1>
@@ -66,33 +79,32 @@ function Login() {
 
         <div className="auth-heading">
           <h2>Welcome back</h2>
-          <p>
-            Sign in to continue to your workspace.
-          </p>
+          <p>Sign in to continue to your workspace.</p>
         </div>
 
         <form onSubmit={handleLogin} className="auth-form">
-
           <div className="form-group">
-            <label>Email address</label>
-
+            <label htmlFor="login-email">Email address</label>
             <input
+              id="login-email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </div>
 
           <div className="form-group">
-            <label>Password</label>
-
+            <label htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
           </div>
@@ -103,9 +115,7 @@ function Login() {
               Remember me
             </label>
 
-            <span className="forgot">
-              Forgot password?
-            </span>
+            <span className="forgot">Forgot password?</span>
           </div>
 
           <button
@@ -115,11 +125,10 @@ function Login() {
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
-
         </form>
 
         {message && (
-          <div className="auth-message">
+          <div className="auth-message" role="status">
             {message}
           </div>
         )}
@@ -136,7 +145,6 @@ function Login() {
         <Link to="/" className="back-home">
           ← Back to home
         </Link>
-
       </div>
     </div>
   );
